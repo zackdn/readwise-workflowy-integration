@@ -3,7 +3,7 @@ var book_request = new XMLHttpRequest()
 
 // Open a new connection, using the GET request on the URL endpoint
 book_request.open('GET', 'https://readwise.io/api/v2/books/?num_highlights__gt=0&page_size=19&page=1', true)
-book_request.setRequestHeader("Authorization", "Token uEbL9EACPBRXwP42bYLOBoDLaY5WV09VLA41mzmTOKdIchYPrs");
+book_request.setRequestHeader("Authorization", "Token XXX");
 book_request.onload = function () {
     // Begin accessing JSON data here
     var data = JSON.parse(this.response)
@@ -27,7 +27,7 @@ function getBooks(pageNum){
 
     // Open a new connection, using the GET request on the URL endpoint
     book_request.open('GET', `https://readwise.io/api/v2/books/?num_highlights__gt=0&page_size=20&page=${pageNum}`, true)
-    book_request.setRequestHeader("Authorization", "Token uEbL9EACPBRXwP42bYLOBoDLaY5WV09VLA41mzmTOKdIchYPrs");
+    book_request.setRequestHeader("Authorization", "Token XXX");
     book_request.onload = function () {
     // Begin accessing JSON data here
     var data = JSON.parse(this.response)
