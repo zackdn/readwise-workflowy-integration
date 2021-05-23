@@ -3,8 +3,12 @@ var booksList = booksRoot.getChildren()
 
 bookListUpdated = booksRoot.getNote()
 bookListUpdated = bookListUpdated.split("Updated: ")[1]
-bookListUpdated = new Date(bookListUpdated)
-bookListUpdated = bookListUpdated.toISOString()
+if(bookListUpdated!= null){
+    bookListUpdated = new Date(bookListUpdated)
+    bookListUpdated = bookListUpdated.toISOString()
+} else {
+    bookListUpdated = new Date("1980-01-01")
+    bookListUpdated = bookListUpdated.toISOString()}
 
 console.log(bookListUpdated)
 
