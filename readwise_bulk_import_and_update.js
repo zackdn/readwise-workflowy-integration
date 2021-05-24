@@ -2,7 +2,7 @@ var newBookCount = 0
 var oldBookCount = 0
 var newHighlightCount = 0
 var oldHighlightCount = 0
-
+var bookCountImported = 0
 var booksRoot = WF.currentItem()
 var booksList = booksRoot.getChildren()
 
@@ -50,32 +50,57 @@ book_request.onload = function () {
     var data = JSON.parse(this.response)
 
     if(data.count>0){
-        alert("This could take several minutes! Please leave this window open. You will receive a confirmation upon completion.\n\nThanks for using Readwise!")
+        var pageCount = Math.ceil(data.count/20)
+        pageCount > 1 ? quantityMinutes = "minutes" : quantityMinutes = "minute"
+
+        alert(`Welcome to the Readwise Importer!\n\nThis will take approximately ${pageCount} ${quantityMinutes}.\nPlease leave this window open and don't touch anything :)\nYou will receive a confirmation upon completion.\n\nThanks for using Readwise!`)
+
+        var bookCount = data.count
+        console.log("Total book count: " + bookCount)
 
         var booksAPICallsCount = 1
         console.log(`>> Running Books API (Nth time: ${booksAPICallsCount})`)
 
-        booksAPICallsCount = 2
-        console.log(`++ Calling Books API (Nth time: ${booksAPICallsCount})`)
-        console.log(Math.floor(Date.now() / 1000))
-        getBooks(1, bookListUpdated, 2)
+        if(pageCount == 1){
+            function batchBooks(callback){
+                booksAPICallsCount = 2
+                console.log(`++ Calling Books API (Nth time: ${booksAPICallsCount})`)
+                console.log(Math.floor(Date.now() / 1000))
+                getBooks(1, pageCount, bookCount, bookListUpdated, 2, callback)
+            }
+            batchBooks(function(successMessage){
+                setTimeout( function(){
+                    alert(`${successMessage}\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`)
+                },1)
+            })
+        }
+        if (pageCount > 1){
+            booksAPICallsCount = 2
+            console.log(`++ Calling Books API (Nth time: ${booksAPICallsCount})`)
+            console.log(Math.floor(Date.now() / 1000))
+            getBooks(1, pageCount, bookCount, bookListUpdated, 2)
 
-        var pageCount = Math.ceil(data.count/20)
-        
-        if (pageCount>1){
-            var counter = 0;
-            var i = setInterval(function(){
-                booksAPICallsCount++
+            function batchBooks(callback){
+                var counter = 2
+                var i = setInterval(function(){
+                    booksAPICallsCount++
 
-                // Get 20 books at a time
-                getBooks(counter+1, bookListUpdated, booksAPICallsCount)
-                counter++;
+                    // Get 20 books at a time
+                    getBooks(counter, pageCount, bookCount, bookListUpdated, booksAPICallsCount, callback)
 
-                if(counter === pageCount) {
-                    clearInterval(i);
-                    alert(`Success!\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`)
-                }
-            }, 65000);
+                    if(counter == pageCount) {
+                        clearInterval(i)
+                    }
+
+                    counter++
+
+                }, 65000)
+            }
+            batchBooks(function(successMessage){
+                setTimeout( function(){
+                    alert(`${successMessage}\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`)
+                },1)
+            })
         }
         
         var timeElapsed = Date.now();
@@ -97,7 +122,8 @@ For every one of those books, we need to run getHighlights() in order to pull th
 Since Readwise only allows 20 calls to the Highlights API per minute, we need to limit ourselves to only pull 20 books at a time, which will result in 20 calls to the Highlights API.
 
 */
-function getBooks(pageNum, lastUpdated, booksAPICallsCount){
+function getBooks(pageNum, pageCount, bookCount, lastUpdated, booksAPICallsCount, callback){
+    
     var book_request = new XMLHttpRequest()
     book_request.open('GET', `https://readwise.io/api/v2/books/?num_highlights__gt=0&updated__gt=${lastUpdated}&page_size=20&page=${pageNum}`, true)
     book_request.setRequestHeader("Authorization", "Token XXX");
@@ -110,6 +136,9 @@ function getBooks(pageNum, lastUpdated, booksAPICallsCount){
         var highlightsAPICallsCount = 1
 
         data.results.forEach(function(result){
+            bookCountImported++
+            console.log("Books Imported: " + bookCountImported)
+
             // Does this book exist already in the books already listed on this WF node?
             existingBook = bookArray.findIndex(x => x.bookID == result.id)
             result.author = result.author.replaceAll(', ', '#')
@@ -155,15 +184,30 @@ function getBooks(pageNum, lastUpdated, booksAPICallsCount){
                     console.log(Math.floor(Date.now() / 1000))
                     getHighlights(result.id, wfBook, bookListUpdated, highlightsAPICallsCount)
                 }
+            
+                // Add this new book to the array of books already added to the WF node
+                // This will prevent duplicating books on iniital imports
+                arr = {
+                    wfID:   wfBook.getId(), 
+                    wfName: wfBook.getName(), 
+                    wfNamePlain: wfBook.getNameInPlainText(), 
+                    wfNote: wfBook.getNote(),
+                    bookID: result.id,
+                    bookUpdated: result.updated.toDateString()
+                }
+                bookArray.push(arr)
             }
             highlightsAPICallsCount++
         })
+        if (callback){
+            callback("Success!");  
+        }
     }
 
     book_request.send()
 }
 
-function getHighlights(bookID, wfNode, lastUpdated, highlightsAPICallsCount){
+function getHighlights(bookID, wfNode, lastUpdated, highlightsAPICallsCount, callback){
     
     var highlightArray = []
     var highlightsList = wfNode.getChildren()
@@ -187,7 +231,7 @@ function getHighlights(bookID, wfNode, lastUpdated, highlightsAPICallsCount){
     // console.log(highlightArray)
 
     var highlight_request = new XMLHttpRequest()
-    highlight_request.open('GET', `https://readwise.io/api/v2/highlights/?book_id=${bookID}&updated__gt=${lastUpdated}`, true)
+    highlight_request.open('GET', `https://readwise.io/api/v2/highlights/?book_id=${bookID}&updated__gt=${lastUpdated}`, false)
     highlight_request.setRequestHeader("Authorization", "Token XXX");
     highlight_request.onload = function () {
         
@@ -224,7 +268,7 @@ function getHighlights(bookID, wfNode, lastUpdated, highlightsAPICallsCount){
                     WF.setItemName(newNote, result.note)
                     doesBookHaveNotes = 1
                 }
-            } else{
+            } else{ // This highlight doesn't exist - create a new one
                 wfHighlight = WF.createItem(WF.currentItem(),0)
                 newHighlightCount++
                 WF.setItemName(wfHighlight, result.text)
@@ -243,6 +287,10 @@ function getHighlights(bookID, wfNode, lastUpdated, highlightsAPICallsCount){
         }
         // Move all the highlights as children of the book WF node
         WF.moveItems(highlights, wfNode)
+
+        if (callback){
+            callback();  
+        }
     }
 
     highlight_request.send()
