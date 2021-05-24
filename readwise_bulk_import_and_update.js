@@ -73,7 +73,7 @@ book_request.onload = function () {
 
                 if(counter === pageCount) {
                     clearInterval(i);
-                    settimeout(alert(`Success!\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`), 10000)
+                    alert(`Success!\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`)
                 }
             }, 65000);
         }
