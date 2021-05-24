@@ -7,9 +7,10 @@ var booksRoot = WF.currentItem()
 var booksList = booksRoot.getChildren()
 
 bookListUpdated = booksRoot.getNote()
-bookListUpdated = bookListUpdated.split("Updated: ")[1]
-bookListUpdated = bookListUpdated.split("...")[0]
-if(bookListUpdated != null){
+
+if(bookListUpdated != ""){
+    bookListUpdated = bookListUpdated.split("Updated: ")[1]
+    bookListUpdated = bookListUpdated.split("...")[0]
     bookListUpdated = new Date(bookListUpdated)
     bookListUpdated = bookListUpdated.toISOString()
 } else {
