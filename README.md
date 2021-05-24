@@ -8,7 +8,7 @@ Readwise has a batch limit of 20 queries per minute on their book API and their 
 
 ## I could use your help!
 
-This code is really rough (I'm not actually a developer) and I really need help making this better. I'd also REALLY like to write a script that will look at the "Updated: " text in the parent node note and then update the existing books with any new notes as well as add any new books that have been added since that date!
+This code is really rough (I'm not actually a developer) and I really need help making this better. 
 
 **Readwise API** 
 https://readwise.io/api_deets

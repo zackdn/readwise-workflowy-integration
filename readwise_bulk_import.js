@@ -219,7 +219,7 @@ function getBooks(pageNum){
             var parent = wfBook.getParent()
             const timeElapsed = Date.now();
             const today = new Date(timeElapsed);
-            WF.setItemNote(parent, "Updated: " + today.toDateString())
+            WF.setItemNote(parent, "Updated: " + today.toString())
             val.updated = new Date(val.updated)
 
             if (val.source_url == null){
