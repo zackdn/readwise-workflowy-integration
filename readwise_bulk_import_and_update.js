@@ -239,7 +239,6 @@ function getHighlights(bookID, wfNode, lastUpdated, highlightsAPICallsCount){
             }
         });
         if(doesBookHaveNotes==1){
-            console.log(wfNode.getName().split(" #hasNotes")[0])
             WF.setItemName(wfNode, wfNode.getName().split(" #hasNotes")[0] + " #hasNotes")
         }
         // Move all the highlights as children of the book WF node
