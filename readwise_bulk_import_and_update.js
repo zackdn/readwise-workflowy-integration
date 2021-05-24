@@ -8,6 +8,7 @@ var booksList = booksRoot.getChildren()
 
 bookListUpdated = booksRoot.getNote()
 bookListUpdated = bookListUpdated.split("Updated: ")[1]
+bookListUpdated = bookListUpdated.split("...")[0]
 if(bookListUpdated != null){
     bookListUpdated = new Date(bookListUpdated)
     bookListUpdated = bookListUpdated.toISOString()
@@ -106,7 +107,7 @@ book_request.onload = function () {
         var timeElapsed = Date.now();
         var today = new Date(timeElapsed);
 
-        WF.setItemNote(booksRoot, "Updated: " + today.toString())
+        WF.setItemNote(booksRoot, "Updated: " + today.toString() + "...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #readwise_notes\n\n")
     } else {
         alert("There's nothing new to import today!")
     }
@@ -264,9 +265,17 @@ function getHighlights(bookID, wfNode, lastUpdated, highlightsAPICallsCount, cal
                 highlights.push(wfHighlight)
 
                 if(result.note != ""){
-                    newNote = WF.createItem(wfHighlight,0)
-                    WF.setItemName(newNote, result.note)
-                    doesBookHaveNotes = 1
+                    allNotes = wfHighlight.getChildren()
+
+                    allNotes.forEach(function(note){
+                        noteTag = WF.getItemTags(note)
+                        noteTag = noteTag[0]["tag"]
+
+                        if(noteTag == "#readwise_notes"){
+                            WF.setItemName(note, result.note + " #readwise_notes")
+                            doesBookHaveNotes = 1
+                        }
+                    })
                 }
             } else{ // This highlight doesn't exist - create a new one
                 wfHighlight = WF.createItem(WF.currentItem(),0)
@@ -277,13 +286,13 @@ function getHighlights(bookID, wfNode, lastUpdated, highlightsAPICallsCount, cal
 
                 if(result.note != ""){
                     newNote = WF.createItem(wfHighlight,0)
-                    WF.setItemName(newNote, result.note)
+                    WF.setItemName(newNote, result.note + " #readwise_notes")
                     doesBookHaveNotes = 1
                 }
             }
         });
         if(doesBookHaveNotes==1){
-            WF.setItemName(wfNode, wfNode.getName().split(" #hasNotes")[0] + " #hasNotes")
+            WF.setItemName(wfNode, wfNode.getName().split(" #readwise_notes")[0] + " #readwise_notes")
         }
         // Move all the highlights as children of the book WF node
         WF.moveItems(highlights, wfNode)
