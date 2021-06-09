@@ -11,6 +11,7 @@ Readwise has a batch limit of 20 queries per minute on their book API and their 
 This code is really rough (I'm not actually a developer) and I really need help making this better. 
 
 **Readwise API** 
+https://readwise.io/api_deets
 https://readwise.io/access_token 
 
 **WF Consumer-Side API** 
