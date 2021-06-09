@@ -122,11 +122,13 @@ function addBookToWF(book) {
     book.author = book.author.replaceAll('#', ' #')
 
     let wfBook = WF.createItem(WF.currentItem(),0);
+    newBookCount++;
     let parent = wfBook.getParent();
 
     const timeElapsed = Date.now();
     const today = new Date(timeElapsed);
-    WF.setItemNote(parent, "Updated: " + today.toDateString())
+    WF.setItemNote(parent, "Updated: " + today.toDateString() + "...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #readwise_notes\n\n")
+
     book.updated = new Date(book.updated)
 
     if (book.source_url == null){
@@ -138,13 +140,25 @@ function addBookToWF(book) {
     WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
     
     var wfHighlights = []
+    var doesBookHaveNotes = 0
+
     book.highlights.forEach((highlight) => { 
         highlight.updated = new Date(highlight.updated)
         wfHighlight = WF.createItem(WF.currentItem(),0) 
+        newHighlightCount++
         WF.setItemName(wfHighlight, highlight.text) 
         WF.setItemNote(wfHighlight, "Added: " + highlight.updated.toDateString() + " | Note ID: " + highlight.id)
         wfHighlights.push(wfHighlight)
+        
+        if(highlight.note != ""){
+            newNote = WF.createItem(wfHighlight,highlight.location)
+            WF.setItemName(newNote, highlight.note + " #readwise_notes")
+            doesBookHaveNotes = 1
+        }
     });
+    if(doesBookHaveNotes==1){
+        WF.setItemName(wfBook, wfBook.getName().split(" #readwise_notes")[0] + " #readwise_notes")
+    }
     WF.moveItems(wfHighlights, wfBook)
 }
 
@@ -158,121 +172,46 @@ async function addAllHighlightsToWorkflowy() {
     });
 
     console.log("Import complete!");
+    alert(`Success!\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`)
 }
 
+let newBookCount = 0
+let oldBookCount = 0
+let newHighlightCount = 0
+let oldHighlightCount = 0
+let bookCountImported = 0
+let booksRoot = WF.currentItem()
+let booksList = booksRoot.getChildren()
 
+bookListUpdated = booksRoot.getNote()
 
+if(bookListUpdated != ""){
+    bookListUpdated = bookListUpdated.split("Updated: ")[1]
+    bookListUpdated = bookListUpdated.split("...")[0]
+    bookListUpdated = new Date(bookListUpdated)
+    bookListUpdated = bookListUpdated.toISOString()
+} else {
+    bookListUpdated = new Date("1980-01-01")
+    bookListUpdated = bookListUpdated.toISOString()}
 
+console.log("Last updated: " + bookListUpdated)
 
+var bookArray = []
 
-// Create a request variable and assign a new XMLHttpRequest object to it.
-var book_request = new XMLHttpRequest()
+booksList.forEach(function(book){
+    bookID = book.data.note.split("Book ID: ")[1]
+    bookUpdated = book.data.note.split("Updated: ")[1]
+    bookUpdated = bookUpdated.split(" | ")[0]
 
-// Open a new connection, using the GET request on the URL endpoint
-book_request.open('GET', 'https://readwise.io/api/v2/books/?num_highlights__gt=0&page_size=19&page=1', true)
-book_request.setRequestHeader("Authorization", "Token XXX");
-book_request.onload = function () {
-    // Begin accessing JSON data here
-    var data = JSON.parse(this.response)
-    //console.log(data)
-
-    getBooks(1)
-    console.log("Importing...")
-
-    var pageCount = Math.ceil(data.count/20)
-
-    var i
-    for (i=2; i<=pageCount; i++){
-        setTimeout(getBooks, 60000, i)
+    arr = {
+        wfID:   book.data.id, 
+        wfName: book.data.name, 
+        wfNamePlain: book.data.nameInPlainText, 
+        wfNote: book.data.note,
+        bookID: bookID,
+        bookUpdated: bookUpdated
     }
-}
-book_request.send()
+    bookArray.push(arr)
+});
 
-function getBooks(pageNum){
-    // Create a request variable and assign a new XMLHttpRequest object to it.
-    var book_request = new XMLHttpRequest()
-
-    // Open a new connection, using the GET request on the URL endpoint
-    book_request.open('GET', `https://readwise.io/api/v2/books/?num_highlights__gt=0&page_size=20&page=${pageNum}`, true)
-    book_request.setRequestHeader("Authorization", "Token XXX");
-    book_request.onload = function () {
-    // Begin accessing JSON data here
-    var data = JSON.parse(this.response)
-    //console.log(data)
-
-    var results = data.results
-    //console.log(results)
-
-    if (book_request.status >= 200 && book_request.status < 400) {
-        Object.values(results).forEach(val => {
-            //console.log(val.title)
-            //console.log(val.source_url)
-            //console.log(val.author)
-            //console.log(val.category)
-            val.author = val.author.replaceAll(',', '#')
-            val.author = val.author.replaceAll(' ', '_')
-            val.author = val.author.replaceAll('.', '')
-            val.author = val.author.replaceAll('#', ' #')
-
-            wfBook = WF.createItem(WF.currentItem(),0)
-            
-            var parent = wfBook.getParent()
-            const timeElapsed = Date.now();
-            const today = new Date(timeElapsed);
-            WF.setItemNote(parent, "Updated: " + today.toString())
-            val.updated = new Date(val.updated)
-
-            if (val.source_url == null){
-                WF.setItemName(wfBook,val.title + ' #' + val.category)
-            } else {
-                WF.setItemName(wfBook,'<a href="' + val.source_url + '">' + val.title + '</a> #' + val.category)
-            }
-            WF.setItemNote(wfBook,'#' + val.author + " | Notes: " + val.num_highlights + " | Updated: " + val.updated.toDateString() + " | Book ID: " + val.id)
-            
-            if (val.num_highlights > 0){
-                setTimeout(getHighlights, 1, val.id, wfBook)
-            }
-        });
-    } else {
-        console.log('error')
-    }}
-
-    // Send request
-    book_request.send()
-}
-
-function getHighlights(bookID, wfNode){
-    // Create a request variable and assign a new XMLHttpRequest object to it.
-    var highlight_request = new XMLHttpRequest()
-
-    // Open a new connection, using the GET request on the URL endpoint
-    highlight_request.open('GET', `https://readwise.io/api/v2/highlights/?book_id=${bookID}`, false)
-    highlight_request.setRequestHeader("Authorization", "Token XXX");
-    highlight_request.onload = function () {
-    // Begin accessing JSON data here
-    var data = JSON.parse(this.response)
-    //console.log(data)
-
-    var results = data.results
-    //console.log(results)
-
-    if (highlight_request.status >= 200 && highlight_request.status < 400) {
-        var highlights = []
-        Object.values(results).forEach(val => {
-            //console.log(val.book_id);
-            //console.log(val.text);
-            val.updated = new Date(val.updated)
-
-            wfHighlight = WF.createItem(WF.currentItem(),0)
-            WF.setItemName(wfHighlight, val.text)
-            WF.setItemNote(wfHighlight, "Added: " + val.updated.toDateString() + " | Note ID: " + val.id)
-            highlights.push(wfHighlight)
-        });
-        WF.moveItems(highlights, wfNode)
-    } else {
-        console.log('error')
-    }}
-
-    // Send request
-    highlight_request.send()
-}
+addAllHighlightsToWorkflowy()
