@@ -1,5 +1,5 @@
 /** Readwise Access Token from https://readwise.io/access_token */
-let ACCESS_TOKEN = "uEbL9EACPBRXwP42bYLOBoDLaY5WV09VLA41mzmTOKdIchYPrs";
+let ACCESS_TOKEN = "XXX";
 
 let BASE_URL = "https://readwise.io/api/v2/";
 
