@@ -123,11 +123,6 @@ function addBookToWF(book) {
 
     let wfBook = WF.createItem(WF.currentItem(),0);
     newBookCount++;
-    let parent = wfBook.getParent();
-
-    const timeElapsed = Date.now();
-    const today = new Date(timeElapsed);
-    WF.setItemNote(parent, "Updated: " + today.toDateString() + "...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #readwise_notes\n\n")
 
     book.updated = new Date(book.updated)
 
@@ -143,11 +138,11 @@ function addBookToWF(book) {
     var doesBookHaveNotes = 0
 
     book.highlights.forEach((highlight) => { 
-        highlight.updated = new Date(highlight.updated)
+        highlight.highlighted_at = new Date(highlight.highlighted_at)
         wfHighlight = WF.createItem(WF.currentItem(),0) 
         newHighlightCount++
         WF.setItemName(wfHighlight, highlight.text) 
-        WF.setItemNote(wfHighlight, "Added: " + highlight.updated.toDateString() + " | Note ID: " + highlight.id)
+        WF.setItemNote(wfHighlight, "Location: " + highlight.location + " | Highlighted: " + highlight.highlighted_at.toDateString() + " | Note ID: " + highlight.id)
         wfHighlights.push(wfHighlight)
         
         if(highlight.note != ""){
@@ -171,7 +166,12 @@ async function addAllHighlightsToWorkflowy() {
         addBookToWF(book);
     });
 
+    const timeElapsed = Date.now();
+    const today = new Date(timeElapsed);
+    WF.setItemNote(booksRoot, "Updated: " + today.toDateString() + "...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #readwise_notes\n\n")
+    
     console.log("Import complete!");
+    
     alert(`Success!\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`)
 }
 
@@ -181,37 +181,5 @@ let newHighlightCount = 0
 let oldHighlightCount = 0
 let bookCountImported = 0
 let booksRoot = WF.currentItem()
-let booksList = booksRoot.getChildren()
-
-bookListUpdated = booksRoot.getNote()
-
-if(bookListUpdated != ""){
-    bookListUpdated = bookListUpdated.split("Updated: ")[1]
-    bookListUpdated = bookListUpdated.split("...")[0]
-    bookListUpdated = new Date(bookListUpdated)
-    bookListUpdated = bookListUpdated.toISOString()
-} else {
-    bookListUpdated = new Date("1980-01-01")
-    bookListUpdated = bookListUpdated.toISOString()}
-
-console.log("Last updated: " + bookListUpdated)
-
-var bookArray = []
-
-booksList.forEach(function(book){
-    bookID = book.data.note.split("Book ID: ")[1]
-    bookUpdated = book.data.note.split("Updated: ")[1]
-    bookUpdated = bookUpdated.split(" | ")[0]
-
-    arr = {
-        wfID:   book.data.id, 
-        wfName: book.data.name, 
-        wfNamePlain: book.data.nameInPlainText, 
-        wfNote: book.data.note,
-        bookID: bookID,
-        bookUpdated: bookUpdated
-    }
-    bookArray.push(arr)
-});
 
 addAllHighlightsToWorkflowy()
