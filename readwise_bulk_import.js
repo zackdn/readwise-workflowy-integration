@@ -72,8 +72,8 @@ async function getAllResults(resource, params) {
  * @return {Object} The map of books with their highlights
  */
 async function getAllHighlightsByBook() {
-    let books = await getAllResults("books", {"page_size": 1000, "num_highlights__gt": 0});
-    let highlights = await getAllResults("highlights", {"page_size": 1000});
+    let books = await getAllResults("books", {"page_size": 1000, "num_highlights__gt": 0, "updated__gt": bookListUpdated});
+    let highlights = await getAllResults("highlights", {"page_size": 1000, "updated__gt": bookListUpdated});
     let highlightsByBook = {};
 
     // build map by book id
@@ -82,7 +82,6 @@ async function getAllHighlightsByBook() {
     // inject highlights into the corresponding book (or article, tweet, etc.)
     highlights.forEach((highlight) => { highlightsByBook[highlight.book_id].highlights.unshift(highlight)} );
 
-    console.log(highlightsByBook)
     return highlightsByBook;
 }
 
@@ -116,47 +115,133 @@ function findReadwiseBullet() {
 }
 */
 
-function addBookToWF(book) {
-    // Does this book exist already in the books already listed on this WF node?
-    existingBook = bookArray.findIndex(x => x.bookID == book.id)
-    
+function updateBookInWF(existingBookID, book){
+    let highlightArray = []
+    let highlightsList = WF.getItemById(existingBookID).getChildren()
+
+    // Create an array of the highlights that exist already for this book within WF
+    // We're going to use this array to check for existing highlights we need to update
+    highlightsList.forEach(function(highlight){
+        highlightID = highlight.data.note.split("Note ID: ")[1];
+        highlightUpdated = highlight.data.note.split("Highlighted: ")[1];
+        highlightUpdated = highlightUpdated.split(" | ")[0];
+        highlightLocation = highlight.data.note.split("Location: ")[1];
+        highlightLocation = parseInt(highlightLocation.split(" | ")[0]);
+
+        arr = {
+            wfID:               highlight.data.id, 
+            wfName:             highlight.data.name, 
+            wfNote:             highlight.data.note,
+            highlightID:        highlightID,
+            highlightedDate:    highlightUpdated,
+            location:           highlightLocation
+        }
+        highlightArray.push(arr)
+    });
+
+    book.author = book.author.replaceAll(', ', '#')
+    book.author = book.author.replaceAll(' ', '_')
+    book.author = book.author.replaceAll('.', '')
+    book.author = book.author.replaceAll('#', ' #')
+    book.updated = new Date(book.updated)
+
+    wfBook = WF.getItemById(existingBookID)
+    oldBookCount++
+
+    WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
+
+    // We're going to add any new highlights we find to this array.
+    // When we're done, we're going to sort them all by "Location", 
+    // And use the wfMove function to rearrange them as necessary.
+    let highlights = wfBook.getChildren();
+    let doesBookHaveNotes = 0
+
+    book.highlights.forEach(function(highlight){
+        // Does this highlight exist already in the highlights already listed on this WF node?
+        existingHighlight = highlightArray.findIndex(x => x.highlightID == highlight.id)
+
+        highlight.highlighted_at = new Date(highlight.highlighted_at)
+
+        if(existingHighlight != "-1"){ // This highlight exists already - just update the existing one
+            existingHighlight = highlightArray.find(x => x.highlightID == highlight.id).wfID
+            
+            wfHighlight = WF.getItemById(existingHighlight)
+            oldHighlightCount++
+
+            WF.setItemName(wfHighlight, highlight.text)
+            WF.setItemNote(wfHighlight, "Location: " + highlight.location + " | Highlighted: " + highlight.highlighted_at.toDateString() + " | Note ID: " + highlight.id)
+            
+            if(highlight.note != ""){
+                allNotes = wfHighlight.getChildren()
+
+                allNotes.forEach(function(note){
+                    noteTag = WF.getItemTags(note)
+                    noteTag = noteTag[0]["tag"]
+
+                    if(noteTag == "#readwise_notes"){
+                        WF.setItemName(note, highlight.note + " #readwise_notes")
+                        doesBookHaveNotes = 1
+                    }
+                })
+            }
+        } else { // This highlight doesn't exist - create a new one
+            wfHighlight = WF.createItem(WF.currentItem(), 0)
+            newHighlightCount++
+            WF.setItemName(wfHighlight, highlight.text)
+            WF.setItemNote(wfHighlight, "Location: " + highlight.location + " | Highlighted: " + highlight.highlighted_at.toDateString() + " | Note ID: " + highlight.id)
+            highlights.push(wfHighlight)
+
+            if(highlight.note != ""){
+                newNote = WF.createItem(wfHighlight,highlight.location)
+                WF.setItemName(newNote, highlight.note + " #readwise_notes")
+                doesBookHaveNotes = 1
+            }
+        }
+    });
+    if(doesBookHaveNotes==1){
+        WF.setItemName(wfBook, wfBook.getName().split(" #readwise_notes")[0] + " #readwise_notes")
+    }
+    // Credit to rawbytz (https://github.com/rawbytz/sort) for the code to sort the bullets
+    highlights.sort(function(a, b){
+        a = a.getNote().split("Location: ")[1].split(" | ")[0];
+        b = b.getNote().split("Location: ")[1].split(" | ")[0];
+
+        return a - b;
+    });
+    WF.editGroup(() => {
+        highlights.forEach((highlight, i) => {
+        if (highlight.getPriority() !== i) WF.moveItems([highlight], wfBook, i);
+        });
+    });
+}
+
+function addBookToWF(book) {  
     book.author = book.author.replaceAll(',', '#'); 
     book.author = book.author.replaceAll(' ', '_') 
     book.author = book.author.replaceAll('.', '') 
     book.author = book.author.replaceAll('#', ' #')
     book.updated = new Date(book.updated)
 
-    let wfBook
+    wfBook = WF.createItem(WF.currentItem(),0);
+    newBookCount++;
 
-    if(existingBook != "-1"){ // This book exists already - just add the highlight as a child
-        existingBook = bookArray.find(x => x.bookID == book.id).wfID
-        existingBookName = bookArray.find(x => x.bookID == book.id).wfNamePlain
-        
-        wfBook = WF.getItemById(existingBook)
-        oldBookCount++
-
-        WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
+    if (book.source_url == null){
+        WF.setItemName(wfBook, book.title + ' #' + book.category)
     } else {
-        wfBook = WF.createItem(WF.currentItem(),0);
-        newBookCount++;
-
-        if (book.source_url == null){
-            WF.setItemName(wfBook, book.title + ' #' + book.category)
-        } else {
-            WF.setItemName(wfBook, '<a href="' + book.source_url + '">' + book.title + '</a> #' + book.category)
-        }
-
-        WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
+        WF.setItemName(wfBook, '<a href="' + book.source_url + '">' + book.title + '</a> #' + book.category)
     }
-    var wfHighlights = []
-    var doesBookHaveNotes = 0
+
+    WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
+
+    let wfHighlights = []
+    let doesBookHaveNotes = 0
 
     book.highlights.forEach((highlight) => { 
-        highlight.updated = new Date(highlight.updated)
+        highlight.highlighted_at = new Date(highlight.highlighted_at)
         wfHighlight = WF.createItem(WF.currentItem(),0) 
         newHighlightCount++
         WF.setItemName(wfHighlight, highlight.text) 
-        WF.setItemNote(wfHighlight, "Added: " + highlight.updated.toDateString() + " | Note ID: " + highlight.id)
+        WF.setItemNote(wfHighlight, "Location: " + highlight.location + " | Highlighted: " + highlight.highlighted_at.toDateString() + " | Note ID: " + highlight.id)
         wfHighlights.push(wfHighlight)
         
         if(highlight.note != ""){
@@ -177,7 +262,14 @@ async function addAllHighlightsToWorkflowy() {
     Object.keys(highlightsByBook).forEach(book_id => {
         let book = highlightsByBook[book_id];
         console.log("Adding '" + book.title + "' to WorkFlowy...");
-        addBookToWF(book);
+        
+        // Does this book exist already in the books already listed in this WF node?
+        existingBook = bookArray.findIndex(x => x.bookID == book.id)
+        if (existingBook != "-1"){
+            existingBookID= bookArray.find(x => x.bookID == book.id).wfID;
+        }
+
+        existingBook != "-1" ? updateBookInWF(existingBookID, book) : addBookToWF(book);
     });
 
     const timeElapsed = Date.now();
@@ -194,7 +286,6 @@ let newHighlightCount = 0
 let oldHighlightCount = 0
 let bookCountImported = 0
 let booksRoot = WF.currentItem()
-let booksList = booksRoot.getChildren()
 
 bookListUpdated = booksRoot.getNote()
 
@@ -207,31 +298,13 @@ if(bookListUpdated != ""){
     bookListUpdated = new Date("1980-01-01")
     bookListUpdated = bookListUpdated.toISOString()}
 
-var bookArray = []
+let bookArray = []
+let booksList = booksRoot.getChildren()
 
 booksList.forEach(function(book){
     bookID = book.data.note.split("Book ID: ")[1]
     bookUpdated = book.data.note.split("Updated: ")[1]
     bookUpdated = bookUpdated.split(" | ")[0]
-
-    var highlightArray = []
-    var highlightsList = book.getChildren()
-
-    // Create an array of the highlights that exist already for this book within WF
-    highlightsList.forEach(function(highlight){
-        highlightID = highlight.data.note.split("Note ID: ")[1]
-        highlightUpdated = highlight.data.note.split("Added: ")[1]
-        highlightUpdated = highlightUpdated.split(" | ")[0]
-
-        arr = {
-            wfID:               highlight.data.id, 
-            wfName:             highlight.data.name, 
-            wfNote:             highlight.data.note,
-            highlightID:        highlightID,
-            highlightUpdated:   highlightUpdated
-        }
-        highlightArray.push(arr)
-    });
 
     arr = {
         wfID:           book.data.id, 
@@ -239,13 +312,10 @@ booksList.forEach(function(book){
         wfNamePlain:    book.data.nameInPlainText, 
         wfNote:         book.data.note,
         bookID:         bookID,
-        bookUpdated:    bookUpdated,
-        highlights:     highlightArray
+        bookUpdated:    bookUpdated
     }
 
     bookArray.push(arr)
 });
-
-console.log(bookArray)
 
 addAllHighlightsToWorkflowy()
