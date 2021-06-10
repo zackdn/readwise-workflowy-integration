@@ -1,5 +1,5 @@
 /** Readwise Access Token from https://readwise.io/access_token */
-let ACCESS_TOKEN = "XXX";
+let ACCESS_TOKEN = "uEbL9EACPBRXwP42bYLOBoDLaY5WV09VLA41mzmTOKdIchYPrs";
 
 let BASE_URL = "https://readwise.io/api/v2/";
 
@@ -82,6 +82,7 @@ async function getAllHighlightsByBook() {
     // inject highlights into the corresponding book (or article, tweet, etc.)
     highlights.forEach((highlight) => { highlightsByBook[highlight.book_id].highlights.unshift(highlight)} );
 
+    console.log(highlightsByBook)
     return highlightsByBook;
 }
 
@@ -116,29 +117,37 @@ function findReadwiseBullet() {
 */
 
 function addBookToWF(book) {
+    // Does this book exist already in the books already listed on this WF node?
+    existingBook = bookArray.findIndex(x => x.bookID == book.id)
+    
     book.author = book.author.replaceAll(',', '#'); 
     book.author = book.author.replaceAll(' ', '_') 
     book.author = book.author.replaceAll('.', '') 
     book.author = book.author.replaceAll('#', ' #')
-
-    let wfBook = WF.createItem(WF.currentItem(),0);
-    newBookCount++;
-    let parent = wfBook.getParent();
-
-    const timeElapsed = Date.now();
-    const today = new Date(timeElapsed);
-    WF.setItemNote(parent, "Updated: " + today.toDateString() + "...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #readwise_notes\n\n")
-
     book.updated = new Date(book.updated)
 
-    if (book.source_url == null){
-        WF.setItemName(wfBook, book.title + ' #' + book.category)
-    } else {
-        WF.setItemName(wfBook, '<a href="' + book.source_url + '">' + book.title + '</a> #' + book.category)
-    }
+    let wfBook
 
-    WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
-    
+    if(existingBook != "-1"){ // This book exists already - just add the highlight as a child
+        existingBook = bookArray.find(x => x.bookID == book.id).wfID
+        existingBookName = bookArray.find(x => x.bookID == book.id).wfNamePlain
+        
+        wfBook = WF.getItemById(existingBook)
+        oldBookCount++
+
+        WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
+    } else {
+        wfBook = WF.createItem(WF.currentItem(),0);
+        newBookCount++;
+
+        if (book.source_url == null){
+            WF.setItemName(wfBook, book.title + ' #' + book.category)
+        } else {
+            WF.setItemName(wfBook, '<a href="' + book.source_url + '">' + book.title + '</a> #' + book.category)
+        }
+
+        WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
+    }
     var wfHighlights = []
     var doesBookHaveNotes = 0
 
@@ -171,6 +180,10 @@ async function addAllHighlightsToWorkflowy() {
         addBookToWF(book);
     });
 
+    const timeElapsed = Date.now();
+    const today = new Date(timeElapsed);
+    WF.setItemNote(WF.currentItem(), "Updated: " + today.toDateString() + "...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #readwise_notes\n\n")
+
     console.log("Import complete!");
     alert(`Success!\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`)
 }
@@ -194,8 +207,6 @@ if(bookListUpdated != ""){
     bookListUpdated = new Date("1980-01-01")
     bookListUpdated = bookListUpdated.toISOString()}
 
-console.log("Last updated: " + bookListUpdated)
-
 var bookArray = []
 
 booksList.forEach(function(book){
@@ -203,15 +214,38 @@ booksList.forEach(function(book){
     bookUpdated = book.data.note.split("Updated: ")[1]
     bookUpdated = bookUpdated.split(" | ")[0]
 
+    var highlightArray = []
+    var highlightsList = book.getChildren()
+
+    // Create an array of the highlights that exist already for this book within WF
+    highlightsList.forEach(function(highlight){
+        highlightID = highlight.data.note.split("Note ID: ")[1]
+        highlightUpdated = highlight.data.note.split("Added: ")[1]
+        highlightUpdated = highlightUpdated.split(" | ")[0]
+
+        arr = {
+            wfID:               highlight.data.id, 
+            wfName:             highlight.data.name, 
+            wfNote:             highlight.data.note,
+            highlightID:        highlightID,
+            highlightUpdated:   highlightUpdated
+        }
+        highlightArray.push(arr)
+    });
+
     arr = {
-        wfID:   book.data.id, 
-        wfName: book.data.name, 
-        wfNamePlain: book.data.nameInPlainText, 
-        wfNote: book.data.note,
-        bookID: bookID,
-        bookUpdated: bookUpdated
+        wfID:           book.data.id, 
+        wfName:         book.data.name, 
+        wfNamePlain:    book.data.nameInPlainText, 
+        wfNote:         book.data.note,
+        bookID:         bookID,
+        bookUpdated:    bookUpdated,
+        highlights:     highlightArray
     }
+
     bookArray.push(arr)
 });
+
+console.log(bookArray)
 
 addAllHighlightsToWorkflowy()
