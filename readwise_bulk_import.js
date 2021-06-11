@@ -322,6 +322,7 @@ async function addBookToWF(book) {
         wfHighlight = WF.createItem(WF.currentItem(),0) 
         newHighlightCount++
         WF.setItemName(wfHighlight, highlight.text) 
+
         itemNotes = [];
         if (highlight.location) {
             itemNotes.push("Location: " + highlight.location);
