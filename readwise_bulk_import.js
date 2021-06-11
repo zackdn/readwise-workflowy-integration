@@ -115,7 +115,7 @@ function findReadwiseBullet() {
 }
 */
 
-function updateBookInWF(existingBookID, book){
+async function updateBookInWF(existingBookID, book){
     let highlightArray = []
     let highlightsList = WF.getItemById(existingBookID).getChildren()
 
@@ -139,22 +139,39 @@ function updateBookInWF(existingBookID, book){
         highlightArray.push(arr)
     });
 
-    book.author = book.author.replaceAll(', ', '#')
-    book.author = book.author.replaceAll(' ', '_')
-    book.author = book.author.replaceAll('.', '')
-    book.author = book.author.replaceAll('#', ' #')
+    if (book.author) {
+        book.author = book.author.replaceAll(',', '#'); 
+        book.author = book.author.replaceAll(' ', '_') 
+        book.author = book.author.replaceAll('.', '') 
+        book.author = book.author.replaceAll('#', ' #')
+    }
+  
     book.updated = new Date(book.updated)
 
     wfBook = WF.getItemById(existingBookID)
     oldBookCount++
+    
+    let itemNotes = [];
 
-    WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
+    if (book.author) {
+      if (book.author.startsWith("@")) { // Leave Twitter authors alone
+        itemNotes.push(book.author);
+      } else {
+        itemNotes.push("#" + book.author);
+      }
+    }
+
+    itemNotes.push("Notes: " + book.num_highlights);
+    itemNotes.push("Updated: " + book.updated.toDateString());
+    itemNotes.push("Resource ID: " + book.id);
+
+    WF.setItemNote(wfBook, itemNotes.join(" | "));
 
     // We're going to add any new highlights we find to this array.
     // When we're done, we're going to sort them all by "Location", 
     // And use the wfMove function to rearrange them as necessary.
     let highlights = wfBook.getChildren();
-    let doesBookHaveNotes = 0
+    var bookHasNotes = false;
 
     book.highlights.forEach(function(highlight){
         // Does this highlight exist already in the highlights already listed on this WF node?
@@ -169,9 +186,31 @@ function updateBookInWF(existingBookID, book){
             oldHighlightCount++
 
             WF.setItemName(wfHighlight, highlight.text)
-            WF.setItemNote(wfHighlight, "Location: " + highlight.location + " | Highlighted: " + highlight.highlighted_at.toDateString() + " | Note ID: " + highlight.id)
+
+            itemNotes = [];
+            if (highlight.location) {
+                itemNotes.push("Location: " + highlight.location);
+            }
+    
+            itemNotes.push("Highlighted: " + highlight.highlighted_at.toDateString());
+            itemNotes.push("Note ID: " + highlight.id);
+    
+            highlight.tags = [];
+            let noteWords = highlight.note.split(" ");
+            noteWords.forEach(word => {
+                if (word.startsWith(".")) {
+                    highlight.tags.push(word.replaceAll(".", "#"));
+                }
+            });
+    
+            if (highlight.tags.length > 0) {
+                itemNotes.push("Tags: " + highlight.tags.join(" "));
+            }
+    
+            WF.setItemNote(wfHighlight, itemNotes.join(" | "));
+    
             
-            if(highlight.note != ""){
+            if (highlight.note != ""){
                 allNotes = wfHighlight.getChildren()
 
                 allNotes.forEach(function(note){
@@ -180,7 +219,7 @@ function updateBookInWF(existingBookID, book){
 
                     if(noteTag == "#readwise_notes"){
                         WF.setItemName(note, highlight.note + " #readwise_notes")
-                        doesBookHaveNotes = 1
+                        bookHasNotes = true;
                     }
                 })
             }
@@ -188,19 +227,43 @@ function updateBookInWF(existingBookID, book){
             wfHighlight = WF.createItem(WF.currentItem(), 0)
             newHighlightCount++
             WF.setItemName(wfHighlight, highlight.text)
-            WF.setItemNote(wfHighlight, "Location: " + highlight.location + " | Highlighted: " + highlight.highlighted_at.toDateString() + " | Note ID: " + highlight.id)
+            
+            itemNotes = [];
+            if (highlight.location) {
+                itemNotes.push("Location: " + highlight.location);
+            }
+    
+            itemNotes.push("Highlighted: " + highlight.highlighted_at.toDateString());
+            itemNotes.push("Note ID: " + highlight.id);
+    
+            highlight.tags = [];
+            let noteWords = highlight.note.split(" ");
+            noteWords.forEach(word => {
+                if (word.startsWith(".")) {
+                    highlight.tags.push(word.replaceAll(".", "#"));
+                    noteTags.push(word.replaceAll(".", "#"));
+                }
+            });
+    
+            if (highlight.tags.length > 0) {
+                itemNotes.push("Tags: " + highlight.tags.join(" "));
+            }
+    
+            WF.setItemNote(wfHighlight, itemNotes.join(" | "));
             highlights.push(wfHighlight)
 
-            if(highlight.note != ""){
+            if (highlight.note != ""){
                 newNote = WF.createItem(wfHighlight,highlight.location)
                 WF.setItemName(newNote, highlight.note + " #readwise_notes")
-                doesBookHaveNotes = 1
+                bookHasNotes = true;
             }
         }
     });
-    if(doesBookHaveNotes==1){
+    
+    if (bookHasNotes){
         WF.setItemName(wfBook, wfBook.getName().split(" #readwise_notes")[0] + " #readwise_notes")
     }
+    
     // Credit to rawbytz (https://github.com/rawbytz/sort) for the code to sort the bullets
     highlights.sort(function(a, b){
         a = a.getNote().split("Location: ")[1].split(" | ")[0];
@@ -208,6 +271,7 @@ function updateBookInWF(existingBookID, book){
 
         return a - b;
     });
+    
     WF.editGroup(() => {
         highlights.forEach((highlight, i) => {
         if (highlight.getPriority() !== i) WF.moveItems([highlight], wfBook, i);
@@ -215,15 +279,18 @@ function updateBookInWF(existingBookID, book){
     });
 }
 
-function addBookToWF(book) {  
-    book.author = book.author.replaceAll(',', '#'); 
-    book.author = book.author.replaceAll(' ', '_') 
-    book.author = book.author.replaceAll('.', '') 
-    book.author = book.author.replaceAll('#', ' #')
-    book.updated = new Date(book.updated)
+async function addBookToWF(book) {
+    if (book.author) {
+      book.author = book.author.replaceAll(',', '#'); 
+      book.author = book.author.replaceAll(' ', '_') 
+      book.author = book.author.replaceAll('.', '') 
+      book.author = book.author.replaceAll('#', ' #')
+    }
 
-    wfBook = WF.createItem(WF.currentItem(),0);
+    let wfBook = WF.createItem(WF.currentItem(),0);
     newBookCount++;
+
+    book.updated = new Date(book.updated)
 
     if (book.source_url == null){
         WF.setItemName(wfBook, book.title + ' #' + book.category)
@@ -231,37 +298,77 @@ function addBookToWF(book) {
         WF.setItemName(wfBook, '<a href="' + book.source_url + '">' + book.title + '</a> #' + book.category)
     }
 
-    WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
+    let itemNotes = [];
+
+    if (book.author) {
+      if (book.author.startsWith("@")) { // Leave Twitter authors alone
+        itemNotes.push(book.author);
+      } else {
+        itemNotes.push("#" + book.author);
+      }
+    }
+
+    itemNotes.push("Notes: " + book.num_highlights);
+    itemNotes.push("Updated: " + book.updated.toDateString());
+    itemNotes.push("Resource ID: " + book.id);
+
+    WF.setItemNote(wfBook, itemNotes.join(" | "));
 
     let wfHighlights = []
-    let doesBookHaveNotes = 0
+    var bookHasNotes = false;
 
     book.highlights.forEach((highlight) => { 
         highlight.highlighted_at = new Date(highlight.highlighted_at)
         wfHighlight = WF.createItem(WF.currentItem(),0) 
         newHighlightCount++
         WF.setItemName(wfHighlight, highlight.text) 
-        WF.setItemNote(wfHighlight, "Location: " + highlight.location + " | Highlighted: " + highlight.highlighted_at.toDateString() + " | Note ID: " + highlight.id)
+        itemNotes = [];
+        if (highlight.location) {
+            itemNotes.push("Location: " + highlight.location);
+        }
+
+        itemNotes.push("Highlighted: " + highlight.highlighted_at.toDateString());
+        itemNotes.push("Note ID: " + highlight.id);
+
+        highlight.tags = [];
+        let noteWords = highlight.note.split(" ");
+        noteWords.forEach(word => {
+            if (word.startsWith(".")) {
+                highlight.tags.push(word.replaceAll(".", "#"));
+                noteTags.push(word.replaceAll(".", "#"));
+            }
+        });
+
+        if (highlight.tags.length > 0) {
+            itemNotes.push("Tags: " + highlight.tags.join(" "));
+        }
+
+        WF.setItemNote(wfHighlight, itemNotes.join(" | "));
         wfHighlights.push(wfHighlight)
         
-        if(highlight.note != ""){
+        if (highlight.note != ""){
             newNote = WF.createItem(wfHighlight,highlight.location)
             WF.setItemName(newNote, highlight.note + " #readwise_notes")
-            doesBookHaveNotes = 1
+            bookHasNotes = true;
         }
     });
-    if(doesBookHaveNotes==1){
+
+    if (bookHasNotes){
         WF.setItemName(wfBook, wfBook.getName().split(" #readwise_notes")[0] + " #readwise_notes")
     }
-    WF.moveItems(wfHighlights, wfBook)
+    WF.moveItems(wfHighlights, wfBook);
 }
 
 
 async function addAllHighlightsToWorkflowy() {
     let highlightsByBook = await getAllHighlightsByBook();
+    let currentBook = 0;
+    let totalBooks = Object.keys(highlightsByBook).length;
     Object.keys(highlightsByBook).forEach(book_id => {
+        ++currentBook;
         let book = highlightsByBook[book_id];
         console.log("Adding '" + book.title + "' to WorkFlowy...");
+        console.log("(" + currentBook + "/" + totalBooks + "): Adding '" + book.title + "' to WorkFlowy...");
         
         // Does this book exist already in the books already listed in this WF node?
         existingBook = bookArray.findIndex(x => x.bookID == book.id)
@@ -274,10 +381,14 @@ async function addAllHighlightsToWorkflowy() {
 
     const timeElapsed = Date.now();
     const today = new Date(timeElapsed);
-    WF.setItemNote(WF.currentItem(), "Updated: " + today.toDateString() + "...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #readwise_notes\n\n")
+    WF.setItemNote(booksRoot, `Updated: ${today.toDateString()}...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #tweets | #readwise_notes\n\n`);
+    
+    // TODO: Add section in description for highlight tags via user's notes
+
+    /* WF.setItemNote(booksRoot, `Updated: ${today.toDateString()}...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #tweets | #readwise_notes\n\nYOUR NOTE TAGS\nUse these shortcuts to find highlights you've tagged via your notes:\n${noteTags.join(" ")}`);*/
 
     console.log("Import complete!");
-    alert(`Success!\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`)
+    WF.showAlertDialog(`<strong>Success!</strong><br /><br /><strong>Imported:</strong><br />- ${newBookCount} new library items<br />- ${newHighlightCount} new highlights<br /><br /><strong>Updated:</strong><br />- ${oldBookCount} existing library items<br />- ${oldHighlightCount} existing highlights`)
 }
 
 let newBookCount = 0
@@ -286,6 +397,11 @@ let newHighlightCount = 0
 let oldHighlightCount = 0
 let bookCountImported = 0
 let booksRoot = WF.currentItem()
+
+// TODO: Flesh this feature out more.
+// It will add all the user's highlight tags via their notes on initial import, but what about when updating?
+// And what about de-duping highlights that are used more than once throughout the notes?
+let noteTags = [] 
 
 bookListUpdated = booksRoot.getNote()
 
@@ -302,7 +418,7 @@ let bookArray = []
 let booksList = booksRoot.getChildren()
 
 booksList.forEach(function(book){
-    bookID = book.data.note.split("Book ID: ")[1]
+    bookID = book.data.note.split("Resource ID: ")[1]
     bookUpdated = book.data.note.split("Updated: ")[1]
     bookUpdated = bookUpdated.split(" | ")[0]
 
