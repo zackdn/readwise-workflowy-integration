@@ -193,7 +193,7 @@ async function addBookToWF(book) {
         WF.setItemName(wfBook, wfBook.getName().split(" #readwise_notes")[0] + " #readwise_notes")
     }
     WF.moveItems(wfHighlights, wfBook);
-    WF.editItem(wfBook);
+    WF.editItemName(wfBook);
     WF.save();
 }
 
