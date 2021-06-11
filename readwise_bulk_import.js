@@ -115,11 +115,13 @@ function findReadwiseBullet() {
 }
 */
 
-function addBookToWF(book) {
-    book.author = book.author.replaceAll(',', '#'); 
-    book.author = book.author.replaceAll(' ', '_') 
-    book.author = book.author.replaceAll('.', '') 
-    book.author = book.author.replaceAll('#', ' #')
+async function addBookToWF(book) {
+    if (book.author) {
+      book.author = book.author.replaceAll(',', '#'); 
+      book.author = book.author.replaceAll(' ', '_') 
+      book.author = book.author.replaceAll('.', '') 
+      book.author = book.author.replaceAll('#', ' #')
+    }
 
     let wfBook = WF.createItem(WF.currentItem(),0);
     newBookCount++;
@@ -132,47 +134,88 @@ function addBookToWF(book) {
         WF.setItemName(wfBook, '<a href="' + book.source_url + '">' + book.title + '</a> #' + book.category)
     }
 
-    WF.setItemNote(wfBook,'#' + book.author + " | Notes: " + book.num_highlights + " | Updated: " + book.updated.toDateString() + " | Book ID: " + book.id)
+    let itemNotes = [];
+
+    if (book.author) {
+      if (book.author.startsWith("@")) { // Leave Twitter authors alone
+        itemNotes.push(book.author);
+      } else {
+        itemNotes.push("#" + book.author);
+      }
+    }
+
+    itemNotes.push("Notes: " + book.num_highlights);
+    itemNotes.push("Updated: " + book.updated.toDateString());
+    itemNotes.push("Book ID: " + book.id);
+
+    WF.setItemNote(wfBook, itemNotes.join(" | "));
+
     
     var wfHighlights = []
-    var doesBookHaveNotes = 0
+    var bookHasNotes = false;
 
     book.highlights.forEach((highlight) => { 
         highlight.highlighted_at = new Date(highlight.highlighted_at)
         wfHighlight = WF.createItem(WF.currentItem(),0) 
         newHighlightCount++
         WF.setItemName(wfHighlight, highlight.text) 
-        WF.setItemNote(wfHighlight, "Location: " + highlight.location + " | Highlighted: " + highlight.highlighted_at.toDateString() + " | Note ID: " + highlight.id)
+        itemNotes = [];
+        if (highlight.location) {
+            itemNotes.push("Location: " + highlight.location);
+        }
+
+        itemNotes.push("Highlighted: " + highlight.highlighted_at.toDateString());
+        itemNotes.push("Note ID: " + highlight.id);
+
+        highlight.tags = [];
+        let noteWords = highlight.note.split(" ");
+        noteWords.forEach(word => {
+            if (word.startsWith(".")) {
+                highlight.tags.push(word.replaceAll(".", "#"));
+            }
+        });
+
+        if (highlight.tags.length > 0) {
+            itemNotes.push("Tags: " + highlight.tags.join(" "));
+        }
+
+        WF.setItemNote(wfHighlight, itemNotes.join(" | "));
         wfHighlights.push(wfHighlight)
         
-        if(highlight.note != ""){
+        if (highlight.note != ""){
             newNote = WF.createItem(wfHighlight,highlight.location)
             WF.setItemName(newNote, highlight.note + " #readwise_notes")
-            doesBookHaveNotes = 1
+            bookHasNotes = true;
         }
     });
-    if(doesBookHaveNotes==1){
+
+    if (bookHasNotes){
         WF.setItemName(wfBook, wfBook.getName().split(" #readwise_notes")[0] + " #readwise_notes")
     }
-    WF.moveItems(wfHighlights, wfBook)
+    WF.moveItems(wfHighlights, wfBook);
+    WF.editItem(wfBook);
+    WF.save();
 }
 
 
 async function addAllHighlightsToWorkflowy() {
     let highlightsByBook = await getAllHighlightsByBook();
+    let currentBook = 0;
+    let totalBooks = Object.keys(highlightsByBook).length;
     Object.keys(highlightsByBook).forEach(book_id => {
+        ++currentBook;
         let book = highlightsByBook[book_id];
-        console.log("Adding '" + book.title + "' to WorkFlowy...");
+        console.log("(" + currentBook + "/" + totalBooks + "): Adding '" + book.title + "' to WorkFlowy...");
         addBookToWF(book);
     });
 
     const timeElapsed = Date.now();
     const today = new Date(timeElapsed);
-    WF.setItemNote(booksRoot, "Updated: " + today.toDateString() + "...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #readwise_notes\n\n")
+    WF.setItemNote(booksRoot, "Updated: " + today.toDateString() + "...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #tweets | #readwise_notes\n\n")
     
     console.log("Import complete!");
-    
-    alert(`Success!\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`)
+ 
+    WF.showAlertDialog(`Success!\n\nImported:\n- ${newBookCount} new library items\n- ${newHighlightCount} new highlights\n\nUpdated:\n- ${oldBookCount} existing library items\n- ${oldHighlightCount} existing highlights`)
 }
 
 let newBookCount = 0
