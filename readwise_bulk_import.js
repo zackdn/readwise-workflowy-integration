@@ -345,6 +345,9 @@ function getExistingBooks(booksRoot) {
     let booksList = booksRoot.getChildren()
 
     booksList.forEach((book) => {
+        if (book.data.note == "") {
+            return; //skip this bullet, no note found (Note: return goes to the next element of the list)
+        }
         bookID = book.data.note.split("Resource ID: ")[1]
         bookUpdated = book.data.note.split("Updated: ")[1]
         bookUpdated = bookUpdated.split(" | ")[0]
