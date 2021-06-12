@@ -435,4 +435,8 @@ booksList.forEach(function(book){
     bookArray.push(arr)
 });
 
-addAllHighlightsToWorkflowy()
+let exec = confirm("Activated wf-readwise-integration.  Proceed?");
+if (exec) {
+    ACCESS_KEY = prompt("Enter Readwise API Key (from https://readwise.io/access_token)");
+    addAllHighlightsToWorkflowy()
+}
