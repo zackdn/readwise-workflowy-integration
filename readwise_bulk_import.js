@@ -420,18 +420,20 @@ let booksList = booksRoot.getChildren()
 booksList.forEach(function(book){
     bookID = book.data.note.split("Resource ID: ")[1]
     bookUpdated = book.data.note.split("Updated: ")[1]
-    bookUpdated = bookUpdated.split(" | ")[0]
+    if (bookUpdated) { // no updates present on initial import
+        bookUpdated = bookUpdated.split(" | ")[0]
 
-    arr = {
-        wfID:           book.data.id, 
-        wfName:         book.data.name, 
-        wfNamePlain:    book.data.nameInPlainText, 
-        wfNote:         book.data.note,
-        bookID:         bookID,
-        bookUpdated:    bookUpdated
+        arr = {
+            wfID:           book.data.id, 
+            wfName:         book.data.name, 
+            wfNamePlain:    book.data.nameInPlainText, 
+            wfNote:         book.data.note,
+            bookID:         bookID,
+            bookUpdated:    bookUpdated
+        }
+
+        bookArray.push(arr)
     }
-
-    bookArray.push(arr)
 });
 
 if (ACCESS_TOKEN == "XXX") {
