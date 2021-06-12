@@ -190,6 +190,8 @@ async function updateBookInWF(existingBookID, book){
             itemNotes = [];
             if (highlight.location) {
                 itemNotes.push("Location: " + highlight.location);
+            } else {
+                itemNotes.push("Location: 0");
             }
     
             itemNotes.push("Highlighted: " + highlight.highlighted_at.toDateString());
@@ -231,6 +233,8 @@ async function updateBookInWF(existingBookID, book){
             itemNotes = [];
             if (highlight.location) {
                 itemNotes.push("Location: " + highlight.location);
+            } else {
+                itemNotes.push("Location: 0");
             }
     
             itemNotes.push("Highlighted: " + highlight.highlighted_at.toDateString());
@@ -326,6 +330,8 @@ async function addBookToWF(book) {
         itemNotes = [];
         if (highlight.location) {
             itemNotes.push("Location: " + highlight.location);
+        } else {
+            itemNotes.push("Location: 0");
         }
 
         itemNotes.push("Highlighted: " + highlight.highlighted_at.toDateString());
@@ -357,6 +363,20 @@ async function addBookToWF(book) {
     if (bookHasNotes){
         WF.setItemName(wfBook, wfBook.getName().split(" #readwise_notes")[0] + " #readwise_notes")
     }
+
+    // Credit to rawbytz (https://github.com/rawbytz/sort) for the code to sort the bullets
+    wfHighlights.sort(function(a, b){
+        a = a.getNote().split("Location: ")[1].split(" | ")[0];
+        b = b.getNote().split("Location: ")[1].split(" | ")[0];
+
+        return a - b;
+    });
+    
+    WF.editGroup(() => {
+        wfHighlights.forEach((highlight, i) => {
+        if (highlight.getPriority() !== i) WF.moveItems([highlight], wfBook, i);
+        });
+    });
     WF.moveItems(wfHighlights, wfBook);
 }
 
