@@ -1,5 +1,5 @@
 /** Readwise Access Token from https://readwise.io/access_token */
-let ACCESS_TOKEN = "XXX";
+let ACCESS_TOKEN = "XXX"; // if not changed here, script will prompt for it.
 
 let BASE_URL = "https://readwise.io/api/v2/";
 
@@ -434,5 +434,9 @@ booksList.forEach(function(book){
 
     bookArray.push(arr)
 });
+
+if (ACCESS_TOKEN == "XXX") {
+    ACCESS_TOKEN = prompt("Enter Readwise Access Token from https://readwise.io/access_token");
+}
 
 addAllHighlightsToWorkflowy()
