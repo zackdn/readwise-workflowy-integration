@@ -1,5 +1,5 @@
 /** Readwise Access Token from https://readwise.io/access_token */
-let ACCESS_TOKEN = "XXX";
+let ACCESS_TOKEN = "XXX"; // if not changed here, script will prompt for it.
 
 let BASE_URL = "https://readwise.io/api/v2/";
 
@@ -368,7 +368,6 @@ async function addAllHighlightsToWorkflowy() {
     Object.keys(highlightsByBook).forEach(book_id => {
         ++currentBook;
         let book = highlightsByBook[book_id];
-        console.log("Adding '" + book.title + "' to WorkFlowy...");
         console.log("(" + currentBook + "/" + totalBooks + "): Adding '" + book.title + "' to WorkFlowy...");
         
         // Does this book exist already in the books already listed in this WF node?
@@ -382,7 +381,7 @@ async function addAllHighlightsToWorkflowy() {
 
     const timeElapsed = Date.now();
     const today = new Date(timeElapsed);
-    WF.setItemNote(booksRoot, `Updated: ${today.toDateString()}...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #tweets | #readwise_notes\n\n`);
+    WF.setItemNote(booksRoot, `Updated: ${today.toISOString()}...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #tweets | #readwise_notes\n\n`);
     
     // TODO: Add section in description for highlight tags via user's notes
 
@@ -421,18 +420,24 @@ let booksList = booksRoot.getChildren()
 booksList.forEach(function(book){
     bookID = book.data.note.split("Resource ID: ")[1]
     bookUpdated = book.data.note.split("Updated: ")[1]
-    bookUpdated = bookUpdated.split(" | ")[0]
+    if (bookUpdated) { // no updates present on initial import
+        bookUpdated = bookUpdated.split(" | ")[0]
 
-    arr = {
-        wfID:           book.data.id, 
-        wfName:         book.data.name, 
-        wfNamePlain:    book.data.nameInPlainText, 
-        wfNote:         book.data.note,
-        bookID:         bookID,
-        bookUpdated:    bookUpdated
+        arr = {
+            wfID:           book.data.id, 
+            wfName:         book.data.name, 
+            wfNamePlain:    book.data.nameInPlainText, 
+            wfNote:         book.data.note,
+            bookID:         bookID,
+            bookUpdated:    bookUpdated
+        }
+
+        bookArray.push(arr)
     }
-
-    bookArray.push(arr)
 });
+
+if (ACCESS_TOKEN == "XXX") {
+    ACCESS_TOKEN = prompt("Enter Readwise Access Token from https://readwise.io/access_token");
+}
 
 addAllHighlightsToWorkflowy()
