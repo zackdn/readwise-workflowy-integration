@@ -392,6 +392,7 @@ async function addAllHighlightsToWorkflowy() {
     WF.showAlertDialog(`<strong>Success!</strong><br /><br /><strong>Imported:</strong><br />- ${newBookCount} new library items<br />- ${newHighlightCount} new highlights<br /><br /><strong>Updated:</strong><br />- ${oldBookCount} existing library items<br />- ${oldHighlightCount} existing highlights`)
 }
 
+/*
 let newBookCount = 0
 let oldBookCount = 0
 let newHighlightCount = 0
@@ -434,6 +435,7 @@ booksList.forEach(function(book){
 
     bookArray.push(arr)
 });
+*/
 
 let exec = confirm("Activated wf-readwise-integration.  Proceed?");
 if (exec) {
