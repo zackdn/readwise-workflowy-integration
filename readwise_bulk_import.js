@@ -368,7 +368,6 @@ async function addAllHighlightsToWorkflowy() {
     Object.keys(highlightsByBook).forEach(book_id => {
         ++currentBook;
         let book = highlightsByBook[book_id];
-        console.log("Adding '" + book.title + "' to WorkFlowy...");
         console.log("(" + currentBook + "/" + totalBooks + "): Adding '" + book.title + "' to WorkFlowy...");
         
         // Does this book exist already in the books already listed in this WF node?
