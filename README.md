@@ -18,14 +18,14 @@ The contents of this file can be run directly in your browser console and it wil
     - Other useful meta like the author, date highlighted, and more are included as notes
 
 # How to use:
-- Get your Readwise token
-- Download readwise_bulk_import_and_update.js
-- Replace all three instances of “Token XXX” with “Token [your access code here]”
-- Copy the entire contents of the file and paste them into a JS bookmarklet converter (I like this one)
-- Drag the bookmarklet to your bookmarks bar
-- Open a new, blank WF node
-- Name it whatever you want
-- Click the bookmarklet to import your notes!!!!
+1. Get your [Readwise token](https://readwise.io/access_token)
+2. Download [readwise_bulk_import.js](https://github.com/zackdn/wf-readwise-integration/blob/main/readwise_bulk_import.js)
+3. Find `let ACCESS_TOKEN = "XXX";` in the code and replace "XXX" with your Readwise token (see step #1 above)
+4. Copy the entire contents of the file and paste them into a JS bookmarklet converter (I like [this one](https://www.yourjs.com/bookmarklet/))
+5. Drag the bookmarklet to your bookmarks bar
+6. Open a new, blank WF node
+7. Name it whatever you want
+8. Click the bookmarklet to import your notes!!!!
 
 P.S. - The button also allows you to update your Readwise library with just a click
 
