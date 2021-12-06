@@ -1,7 +1,6 @@
 title: Workflowy/Readwise Integration
 author: Zackdn
 email: zackdn@gmail.com
-theme: jekyll-theme-minimal
 description: > # this means to ignore newlines until "baseurl:"
   Import your Readwise notes directly into Workflowy with just a click!
 
