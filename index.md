@@ -1,5 +1,5 @@
 ---
-title: "Readwise/Workflowy Integration"
+title: "Readwise/WorkFlowy Integration"
 ---
 # Features
 
