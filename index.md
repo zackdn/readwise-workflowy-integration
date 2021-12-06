@@ -1,5 +1,4 @@
-The contents of this applet can be run directly in your browser console and it will import all of your Readwise highlights by book and import them into whatever WF node you have open at the time.
-
+<img src="https://repository-images.githubusercontent.com/369888232/6cf5563f-f767-41e2-80c6-743e6c50bc5a" />
 # Features
 
 - **Bulk Import**
