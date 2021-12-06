@@ -1,4 +1,4 @@
-# Workflowy/Readwise Integration
+# Readwise/Workflowy Integration
 
 The contents of this file can be run directly in your browser console and it will import all of your Readwise highlights by book and import them into whatever WF node you have open at the time.
 
