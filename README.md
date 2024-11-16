@@ -39,3 +39,13 @@ https://readwise.io/access_token
 
 **WF Consumer-Side API** 
 https://workflowy.com/s/B.dY94qOYbiG 
+
+## Support Future Development
+
+If you’ve found this plugin helpful and would like to support its continued development, consider making a donation. Your generosity helps cover the time and resources needed to improve the plugin and add new features. Every contribution, no matter the size, makes a difference—thank you for your support!
+
+<form action="https://www.paypal.com/donate" method="post" target="_top">
+<input type="hidden" name="hosted_button_id" value="VTP77J376ZJ6N" />
+<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+<img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+</form>
