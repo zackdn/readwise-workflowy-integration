@@ -18,6 +18,7 @@ The contents of this file can be run directly in your browser console and it wil
     - Other useful meta like the author, date highlighted, and more are included as notes
 
 # How to use:
+![readwise-bookmarklet](https://github.com/user-attachments/assets/b325323e-0e2c-4efe-b46f-a831f1d7d6c3)
 1. Get your [Readwise token](https://readwise.io/access_token)
 2. Download [readwise_bulk_import.js](https://github.com/zackdn/wf-readwise-integration/blob/main/readwise_bulk_import.js)
 3. Find `let ACCESS_TOKEN = "XXX";` in the code and replace "XXX" with your Readwise token (see step #1 above)
@@ -25,7 +26,8 @@ The contents of this file can be run directly in your browser console and it wil
 5. Drag the bookmarklet to your bookmarks bar
 6. Open a new, blank WF node
 7. Name it whatever you want
-8. Click the bookmarklet to import your notes!!!!
+8. IMPORTANT: Make sure the note section of your node is blank, otherwise it will break
+9. Click the bookmarklet to import your notes!!!!
 
 P.S. - The button also allows you to update your Readwise library with just a click
 
