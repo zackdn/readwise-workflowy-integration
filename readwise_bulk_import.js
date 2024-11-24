@@ -1,22 +1,18 @@
 /** Readwise Access Token from https://readwise.io/access_token */
-var ACCESS_TOKEN = "XXX"; // if not changed here, script will prompt for it.
-var BASE_URL = "https://readwise.io/api/v2/";
+let ACCESS_TOKEN = "XXX"; // if not changed here, script will prompt for it.
+const BASE_URL = "https://readwise.io/api/v2/";
 
-var booksRoot = WF.currentItem()
+let booksRoot = WF.currentItem()
+let bookCountImported = 0;
+let newBookCount = 0;
+let newHighlightCount = 0;
+let oldBookCount = 0;
+let oldHighlightCount = 0;
+let noteTags = [] 
+let bookListUpdated = booksRoot.getNote()
 
-// TODO: Flesh this feature out more.
-// It will add all the user's highlight tags via their notes on initial import, but what about when updating?
-// And what about de-duping highlights that are used more than once throughout the notes?
-var noteTags = [] 
-
-var newBookCount = 0;
-var oldBookCount = 0;
-var newHighlightCount = 0;
-var oldHighlightCount = 0;
-var bookCountImported = 0;
-
-var bookListUpdated = booksRoot.getNote()
-
+// Check the note section of the root node for details about the last successful sync.
+// If these details do not exist, assume this is the first time we're running the sync.
 if(bookListUpdated != ""){
     bookListUpdated = bookListUpdated.split("Updated: ")[1]
     bookListUpdated = bookListUpdated.split("...")[0]
@@ -27,16 +23,17 @@ if(bookListUpdated != ""){
     bookListUpdated = bookListUpdated.toISOString()
 }
 
-var bookArray = []
-var booksList = booksRoot.getChildren()
+// If we have run the sync before, let's compile a map of the books for parsing below
+let bookArray = []
+let booksList = booksRoot.getChildren()
 
 booksList.forEach(function(book){
-    bookID = book.data.note.split("Resource ID: ")[1]
-    bookUpdated = book.data.note.split("Updated: ")[1]
+    let bookID = book.data.note.split("Resource ID: ")[1]
+    let bookUpdated = book.data.note.split("Updated: ")[1]
     if (bookUpdated) { // no updates present on initial import
         bookUpdated = bookUpdated.split(" | ")[0]
 
-        arr = {
+        let arr = {
             wfID:           book.data.id, 
             wfName:         book.data.name, 
             wfNamePlain:    book.data.nameInPlainText, 
@@ -49,15 +46,14 @@ booksList.forEach(function(book){
     }
 });
 
+// If the user has not updated the placeholder text with their Readwise API, prompt them for it now
 if (ACCESS_TOKEN == "XXX") {
     ACCESS_TOKEN = prompt("Enter Readwise Access Token from https://readwise.io/access_token");
 }
 
-addAllHighlightsToWorkflowy()
-
 /**
  * General purpose readwise request method.
- * Make a readwise request of type 'method' at the specified url with the provided data
+ * Make a Readwise request of type 'method' at the specified url with the provided data
  * 
  * @param {String} method http method: GET, POST, PUT, PATCH, DELETE
  * @param {String} url request url
@@ -132,41 +128,19 @@ async function getAllHighlightsByBook() {
     books.forEach((book) => { book.highlights = []; highlightsByBook[book.id] = book; });
 
     // inject highlights into the corresponding book (or article, tweet, etc.)
-    highlights.forEach((highlight) => { highlightsByBook[highlight.book_id].highlights.unshift(highlight)} );
+    highlights.forEach((highlight) => { highlightsByBook[highlight.book_id].highlights.unshift(highlight) } );
 
     return highlightsByBook;
 }
 
 
 /**
- * Retrieve the updated books and highlights since the last time we checked.
+ * Update an existing Workflowy node with new details and/or highlights from the related resource delivered via the Readwise API. 
  * 
- * @param {DateTime} lastUpdatedDate Retrieve updates since this date.  Example: "2020-11-20T05:45:48.143797Z"
- * @return {Object} The map of books with their highlights
+ * @param {String} existingBookID Update this book's node with new details and/or highlights
+ * @param {Object} book The complete book object delivered by the Readwise API
+ * @return {void} This function does not return a value.
  */
-/*  // Haven't tested this yet...
-function getUpdatedHighlightsByBook(lastUpdatedDate) {
-    let books = await getAllResults("books", {"page_size": 1000, "num_highlights__gt": 0, "updated__gt": lastUpdatedDate});
-    let highlights = await getAllResults("highlights", {"page_size": 1000, "updated__gt": lastUpdatedDate});
-
-    // build map by book
-    books.forEach((book) => { book.highlights = []; highlightsByBook[book.id] = book; });
-
-    // fill in highlights by book
-    highlights.forEach((highlight) => { highlightsByBook[highlight.book_id].highlights.unshift(highlight)} );
-
-    return highlightsByBook;
-}
-*/
-
-
-/*
-function findReadwiseBullet() {
-    // Maybe a top level readwise bullet for metadata, like the last time we checked?
-
-}
-*/
-
 async function updateBookInWF(existingBookID, book){
     let highlightArray = []
     let highlightsList = WF.getItemById(existingBookID).getChildren()
@@ -174,13 +148,13 @@ async function updateBookInWF(existingBookID, book){
     // Create an array of the highlights that exist already for this book within WF
     // We're going to use this array to check for existing highlights we need to update
     highlightsList.forEach(function(highlight){
-        highlightID = highlight.data.note.split("Note ID: ")[1];
-        highlightUpdated = highlight.data.note.split("Highlighted: ")[1];
+        let highlightID = highlight.data.note.split("Note ID: ")[1];
+        let highlightUpdated = highlight.data.note.split("Highlighted: ")[1];
         highlightUpdated = highlightUpdated.split(" | ")[0];
-        highlightLocation = highlight.data.note.split("Location: ")[1];
+        let highlightLocation = highlight.data.note.split("Location: ")[1];
         highlightLocation = parseInt(highlightLocation.split(" | ")[0]);
 
-        arr = {
+        let arr = {
             wfID:               highlight.data.id, 
             wfName:             highlight.data.name, 
             wfNote:             highlight.data.note,
@@ -200,7 +174,7 @@ async function updateBookInWF(existingBookID, book){
   
     book.updated = new Date(book.updated)
 
-    wfBook = WF.getItemById(existingBookID)
+    let wfBook = WF.getItemById(existingBookID)
     oldBookCount++
     
     let itemNotes = [];
@@ -227,14 +201,14 @@ async function updateBookInWF(existingBookID, book){
 
     book.highlights.forEach(function(highlight){
         // Does this highlight exist already in the highlights already listed on this WF node?
-        existingHighlight = highlightArray.findIndex(x => x.highlightID == highlight.id)
+        let existingHighlight = highlightArray.findIndex(x => x.highlightID == highlight.id)
 
         highlight.highlighted_at = new Date(highlight.highlighted_at)
 
         if(existingHighlight != "-1"){ // This highlight exists already - just update the existing one
             existingHighlight = highlightArray.find(x => x.highlightID == highlight.id).wfID
             
-            wfHighlight = WF.getItemById(existingHighlight)
+            let wfHighlight = WF.getItemById(existingHighlight)
             oldHighlightCount++
 
             WF.setItemName(wfHighlight, highlight.text)
@@ -265,7 +239,7 @@ async function updateBookInWF(existingBookID, book){
     
             
             if (highlight.note != ""){
-                allNotes = wfHighlight.getChildren()
+                let allNotes = wfHighlight.getChildren()
 
                 allNotes.forEach(function(note){
                     noteTag = WF.getItemTags(note)
@@ -278,7 +252,7 @@ async function updateBookInWF(existingBookID, book){
                 })
             }
         } else { // This highlight doesn't exist - create a new one
-            wfHighlight = WF.createItem(WF.currentItem(), 0)
+            let wfHighlight = WF.createItem(WF.currentItem(), 0)
             newHighlightCount++
             WF.setItemName(wfHighlight, highlight.text)
             
@@ -309,7 +283,7 @@ async function updateBookInWF(existingBookID, book){
             highlights.push(wfHighlight)
 
             if (highlight.note != ""){
-                newNote = WF.createItem(wfHighlight,highlight.location)
+                let newNote = WF.createItem(wfHighlight,highlight.location)
                 WF.setItemName(newNote, highlight.note + " #readwise_notes")
                 bookHasNotes = true;
             }
@@ -335,6 +309,13 @@ async function updateBookInWF(existingBookID, book){
     });
 }
 
+/**
+ * Add a new Workflowy node with details and highlights from the related resource delivered via the Readwise API. 
+ * 
+ * @param {Object} book The complete book object delivered by the Readwise API
+ * @return {void} This function does not return a value.
+ */
+
 async function addBookToWF(book) {
     if (book.author) {
       book.author = book.author.replaceAll(',', '#'); 
@@ -344,7 +325,7 @@ async function addBookToWF(book) {
     }
 
     let wfBook = WF.createItem(WF.currentItem(),0);
-    newBookCount = newBookCount++;
+    newBookCount++;
 
     book.updated = new Date(book.updated)
 
@@ -375,7 +356,7 @@ async function addBookToWF(book) {
 
     book.highlights.forEach((highlight) => { 
         highlight.highlighted_at = new Date(highlight.highlighted_at)
-        wfHighlight = WF.createItem(WF.currentItem(),0) 
+        let wfHighlight = WF.createItem(WF.currentItem(),0) 
         newHighlightCount++
         WF.setItemName(wfHighlight, highlight.text) 
 
@@ -406,7 +387,7 @@ async function addBookToWF(book) {
         wfHighlights.push(wfHighlight)
         
         if (highlight.note != ""){
-            newNote = WF.createItem(wfHighlight,highlight.location)
+            let newNote = WF.createItem(wfHighlight,highlight.location)
             WF.setItemName(newNote, highlight.note + " #readwise_notes")
             bookHasNotes = true;
         }
@@ -432,7 +413,11 @@ async function addBookToWF(book) {
     WF.moveItems(wfHighlights, wfBook);
 }
 
-
+/**
+ * Trigger the entire syncing process - adding or updating nodes baased on whether/when the sync was last run. 
+ * 
+ * @return {void} This function does not return a value.
+ */
 async function addAllHighlightsToWorkflowy() {
     let highlightsByBook = await getAllHighlightsByBook();
     let currentBook = 0;
@@ -443,22 +428,28 @@ async function addAllHighlightsToWorkflowy() {
         console.log("(" + currentBook + "/" + totalBooks + "): Adding '" + book.title + "' to WorkFlowy...");
         
         // Does this book exist already in the books already listed in this WF node?
-        existingBook = bookArray.findIndex(x => x.bookID == book.id)
-        if (existingBook != "-1"){
-            existingBookID= bookArray.find(x => x.bookID == book.id).wfID;
-        }
+        let existingBook = bookArray.findIndex(x => x.bookID == book.id);
 
-        existingBook != "-1" ? updateBookInWF(existingBookID, book) : addBookToWF(book);
+        // Yes, it does - update the book
+        if (existingBook != "-1"){
+            let existingBookID = bookArray.find(x => x.bookID == book.id).wfID;
+            updateBookInWF(existingBookID, book);
+        } 
+        // No, it doesn't - add new book
+        else {
+            addBookToWF(book);
+        }
     });
 
     const timeElapsed = Date.now();
     const today = new Date(timeElapsed);
-    WF.setItemNote(booksRoot, `Updated: ${today.toISOString()}...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #tweets | #readwise_notes\n\n`);
+    WF.setItemNote(booksRoot, `Updated: ${today.toISOString()}...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#articles | #books | #podcasts | #readwise_notes | #supplementals | #tweets\n\n`);
     
     // TODO: Add section in description for highlight tags via user's notes
-
-    /* WF.setItemNote(booksRoot, `Updated: ${today.toDateString()}...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#books | #articles | #supplementals | #tweets | #readwise_notes\n\nYOUR NOTE TAGS\nUse these shortcuts to find highlights you've tagged via your notes:\n${noteTags.join(" ")}`);*/
+    // WF.setItemNote(booksRoot, `Updated: ${today.toDateString()}...\n\nWelcome! This page stores your entire Readwise library.\n\nTIPS/TRICKS\n- Don't change any of the imported bullets\n- (Use sub-bullets instead)\n- Use the tags below to navigate\n- <a href=\"https://github.com/zackdn/wf-readwise-integration\">Reach out with questions/support!</a>\n\nSHORTCUTS\nUse these shortcuts to navigate through your library, highlights, and notes:\n#articles | #books | #podcasts | #readwise_notes | #supplementals | #tweets\n\nYOUR NOTE TAGS\nUse these shortcuts to find highlights you've tagged via your notes:\n${noteTags.join(" ")}`);
 
     console.log("Import complete!");
     WF.showAlertDialog(`<strong>Success!</strong><br /><br /><strong>Imported:</strong><br />- ${newBookCount} new library items<br />- ${newHighlightCount} new highlights<br /><br /><strong>Updated:</strong><br />- ${oldBookCount} existing library items<br />- ${oldHighlightCount} existing highlights`)
 }
+
+addAllHighlightsToWorkflowy()
