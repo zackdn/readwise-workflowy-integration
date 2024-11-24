@@ -1,7 +1,58 @@
 /** Readwise Access Token from https://readwise.io/access_token */
-let ACCESS_TOKEN = "XXX"; // if not changed here, script will prompt for it.
+ACCESS_TOKEN = "XXX"; // if not changed here, script will prompt for it.
+BASE_URL = "https://readwise.io/api/v2/";
 
-let BASE_URL = "https://readwise.io/api/v2/";
+booksRoot = WF.currentItem()
+
+// TODO: Flesh this feature out more.
+// It will add all the user's highlight tags via their notes on initial import, but what about when updating?
+// And what about de-duping highlights that are used more than once throughout the notes?
+noteTags = [] 
+
+newBookCount = 0;
+oldBookCount = 0;
+newHighlightCount = 0;
+oldHighlightCount = 0;
+bookCountImported = 0;
+
+bookListUpdated = booksRoot.getNote()
+
+if(bookListUpdated != ""){
+    bookListUpdated = bookListUpdated.split("Updated: ")[1]
+    bookListUpdated = bookListUpdated.split("...")[0]
+    bookListUpdated = new Date(bookListUpdated)
+    bookListUpdated = bookListUpdated.toISOString()
+} else {
+    bookListUpdated = new Date("1980-01-01")
+    bookListUpdated = bookListUpdated.toISOString()}
+
+bookArray = []
+booksList = booksRoot.getChildren()
+
+booksList.forEach(function(book){
+    bookID = book.data.note.split("Resource ID: ")[1]
+    bookUpdated = book.data.note.split("Updated: ")[1]
+    if (bookUpdated) { // no updates present on initial import
+        bookUpdated = bookUpdated.split(" | ")[0]
+
+        arr = {
+            wfID:           book.data.id, 
+            wfName:         book.data.name, 
+            wfNamePlain:    book.data.nameInPlainText, 
+            wfNote:         book.data.note,
+            bookID:         bookID,
+            bookUpdated:    bookUpdated
+        }
+
+        bookArray.push(arr)
+    }
+});
+
+if (ACCESS_TOKEN == "XXX") {
+    ACCESS_TOKEN = prompt("Enter Readwise Access Token from https://readwise.io/access_token");
+}
+
+addAllHighlightsToWorkflowy()
 
 /**
  * General purpose readwise request method.
@@ -292,7 +343,7 @@ async function addBookToWF(book) {
     }
 
     let wfBook = WF.createItem(WF.currentItem(),0);
-    newBookCount++;
+    newBookCount = newBookCount++;
 
     book.updated = new Date(book.updated)
 
@@ -410,54 +461,3 @@ async function addAllHighlightsToWorkflowy() {
     console.log("Import complete!");
     WF.showAlertDialog(`<strong>Success!</strong><br /><br /><strong>Imported:</strong><br />- ${newBookCount} new library items<br />- ${newHighlightCount} new highlights<br /><br /><strong>Updated:</strong><br />- ${oldBookCount} existing library items<br />- ${oldHighlightCount} existing highlights`)
 }
-
-let newBookCount = 0
-let oldBookCount = 0
-let newHighlightCount = 0
-let oldHighlightCount = 0
-let bookCountImported = 0
-let booksRoot = WF.currentItem()
-
-// TODO: Flesh this feature out more.
-// It will add all the user's highlight tags via their notes on initial import, but what about when updating?
-// And what about de-duping highlights that are used more than once throughout the notes?
-let noteTags = [] 
-
-bookListUpdated = booksRoot.getNote()
-
-if(bookListUpdated != ""){
-    bookListUpdated = bookListUpdated.split("Updated: ")[1]
-    bookListUpdated = bookListUpdated.split("...")[0]
-    bookListUpdated = new Date(bookListUpdated)
-    bookListUpdated = bookListUpdated.toISOString()
-} else {
-    bookListUpdated = new Date("1980-01-01")
-    bookListUpdated = bookListUpdated.toISOString()}
-
-let bookArray = []
-let booksList = booksRoot.getChildren()
-
-booksList.forEach(function(book){
-    bookID = book.data.note.split("Resource ID: ")[1]
-    bookUpdated = book.data.note.split("Updated: ")[1]
-    if (bookUpdated) { // no updates present on initial import
-        bookUpdated = bookUpdated.split(" | ")[0]
-
-        arr = {
-            wfID:           book.data.id, 
-            wfName:         book.data.name, 
-            wfNamePlain:    book.data.nameInPlainText, 
-            wfNote:         book.data.note,
-            bookID:         bookID,
-            bookUpdated:    bookUpdated
-        }
-
-        bookArray.push(arr)
-    }
-});
-
-if (ACCESS_TOKEN == "XXX") {
-    ACCESS_TOKEN = prompt("Enter Readwise Access Token from https://readwise.io/access_token");
-}
-
-addAllHighlightsToWorkflowy()
