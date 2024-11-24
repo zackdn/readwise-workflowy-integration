@@ -1,21 +1,21 @@
 /** Readwise Access Token from https://readwise.io/access_token */
-ACCESS_TOKEN = "XXX"; // if not changed here, script will prompt for it.
-BASE_URL = "https://readwise.io/api/v2/";
+var ACCESS_TOKEN = "XXX"; // if not changed here, script will prompt for it.
+var BASE_URL = "https://readwise.io/api/v2/";
 
-booksRoot = WF.currentItem()
+var booksRoot = WF.currentItem()
 
 // TODO: Flesh this feature out more.
 // It will add all the user's highlight tags via their notes on initial import, but what about when updating?
 // And what about de-duping highlights that are used more than once throughout the notes?
-noteTags = [] 
+var noteTags = [] 
 
-newBookCount = 0;
-oldBookCount = 0;
-newHighlightCount = 0;
-oldHighlightCount = 0;
-bookCountImported = 0;
+var newBookCount = 0;
+var oldBookCount = 0;
+var newHighlightCount = 0;
+var oldHighlightCount = 0;
+var bookCountImported = 0;
 
-bookListUpdated = booksRoot.getNote()
+var bookListUpdated = booksRoot.getNote()
 
 if(bookListUpdated != ""){
     bookListUpdated = bookListUpdated.split("Updated: ")[1]
@@ -24,10 +24,11 @@ if(bookListUpdated != ""){
     bookListUpdated = bookListUpdated.toISOString()
 } else {
     bookListUpdated = new Date("1980-01-01")
-    bookListUpdated = bookListUpdated.toISOString()}
+    bookListUpdated = bookListUpdated.toISOString()
+}
 
-bookArray = []
-booksList = booksRoot.getChildren()
+var bookArray = []
+var booksList = booksRoot.getChildren()
 
 booksList.forEach(function(book){
     bookID = book.data.note.split("Resource ID: ")[1]
